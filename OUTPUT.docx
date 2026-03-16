@@ -1,0 +1,65 @@
+import cv2
+import numpy as np
+from tensorflow.keras.models import load_model
+import random
+
+# Load the trained model (you already placed it correctly)
+model = load_model(r"C:\Users\spoorthi\Downloads\rps_model.h5")
+
+# Define labels
+labels = ["Rock", "Paper", "Scissors"]
+
+# Start webcam
+cap = cv2.VideoCapture(0)
+
+if not cap.isOpened():
+    print("Webcam not accessible!")
+    exit()
+
+print("Starting Rock-Paper-Scissors game. Press 'q' to quit.")
+
+while True:
+    ret, frame = cap.read()
+    if not ret:
+        break
+
+    # Draw rectangle for ROI
+    cv2.rectangle(frame, (100, 100), (300, 300), (255, 255, 255), 2)
+    roi = frame[100:300, 100:300]
+
+    # Resize ROI to match model input size (150x150)
+    img = cv2.resize(roi, (150, 150))
+    img = img.astype("float32") / 255.0
+    img = np.expand_dims(img, axis=0)  # Shape becomes (1, 150, 150, 3)
+
+    # Predict user's move
+    prediction = model.predict(img)[0]
+    user_move = labels[np.argmax(prediction)]
+
+    # Computer move
+    comp_move = random.choice(labels)
+
+    # Decide result
+    if user_move == comp_move:
+        result = "Tie"
+    elif (user_move == "Rock" and comp_move == "Scissors") or \
+         (user_move == "Paper" and comp_move == "Rock") or \
+         (user_move == "Scissors" and comp_move == "Paper"):
+        result = "You Win!"
+    else:
+        result = "Computer Wins!"
+
+    # Display info
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    cv2.putText(frame, f"Your Move: {user_move}", (10, 350), font, 0.7, (255, 255, 0), 2)
+    cv2.putText(frame, f"Computer: {comp_move}", (10, 380), font, 0.7, (0, 255, 255), 2)
+    cv2.putText(frame, f"Result: {result}", (10, 410), font, 0.8, (0, 255, 0), 2)
+
+    cv2.imshow("Rock Paper Scissors - Press 'q' to quit", frame)
+
+    if cv2.waitKey(1) & 0xFF == ord("q"):
+        break
+
+# Release resources
+cap.release()
+cv2.destroyAllWindows()
